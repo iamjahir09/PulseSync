@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { ToastProvider } from "@/components/ToastContainer";
 // @ts-ignore
-import "./globals.css";   // ✅ YAHAN "./styles/globals.css" NAHI, SIRF "./globals.css"
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Skitii Health Tech",
-  description: "Patient Management with BLE",
+  title: "PulseSync - Patient Monitoring",
+  description: "Healthcare patient management with BLE monitoring",
 };
 
 export default function RootLayout({
@@ -15,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="container">
+        <ToastProvider>
           {children}
-        </div>
+        </ToastProvider>
       </body>
     </html>
   );

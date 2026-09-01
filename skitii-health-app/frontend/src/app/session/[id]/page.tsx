@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '@/components/ToastContainer';
 
 interface BLEHeartRateData {
   heartRate: number;
@@ -15,6 +16,7 @@ export default function SessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const patientId = params.id as string;
   const patientName = searchParams.get('name') || 'Unknown Patient';
 
@@ -33,17 +35,16 @@ export default function SessionPage() {
   const sessionIdRef = useRef<string | null>(null);
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  // Mock BLE data generation
   const generateMockHeartRate = () => {
     const baseHR = 65 + Math.floor(Math.random() * 25);
     const rr = 600 + Math.floor(Math.random() * 300);
     return { heartRate: baseHR, rrIntervals: [rr] };
   };
 
-  // Start scanning for BLE devices
   const startScanning = async () => {
-    if (!(navigator as any).bluetooth) {
-      setError('Web Bluetooth API not supported. Please use Chrome.');
+    if (!((navigator as any).bluetooth)) {
+      setError('Web Bluetooth API is not supported. Please use Chrome browser.');
+      showToast('Web Bluetooth not supported', 'error');
       return;
     }
 
@@ -60,11 +61,14 @@ export default function SessionPage() {
       await connectToDevice(device);
     } catch (err: any) {
       if (err.name === 'NotFoundError') {
-        setError('No BLE device found.');
+        setError('No BLE device found. Make sure your device is on and in range.');
+        showToast('No BLE device found', 'error');
       } else if (err.name === 'SecurityError') {
-        setError('BLE requires HTTPS or localhost.');
+        setError('BLE connection requires HTTPS or localhost.');
+        showToast('BLE requires HTTPS', 'error');
       } else {
-        setError(`Failed: ${err.message}`);
+        setError(`Connection failed: ${err.message}`);
+        showToast('Connection failed', 'error');
       }
       setConnectionState('disconnected');
     }
@@ -83,9 +87,11 @@ export default function SessionPage() {
       device.addEventListener('gattserverdisconnected', handleDisconnect);
 
       setConnectionState('connected');
+      showToast('Device connected successfully', 'success');
       startSession();
     } catch (err: any) {
       setError(`Failed to connect: ${err.message}`);
+      showToast('Connection failed', 'error');
       setConnectionState('disconnected');
     }
   };
@@ -148,16 +154,19 @@ export default function SessionPage() {
 
   const handleDisconnect = () => {
     setConnectionState('reconnecting');
-    setError('Device disconnected. Reconnecting...');
+    setError('Device disconnected. Attempting to reconnect...');
+    showToast('Device disconnected', 'warning');
 
     if (bleDevice) {
       setTimeout(async () => {
         try {
           await connectToDevice(bleDevice);
           setError(null);
+          showToast('Reconnected successfully', 'success');
         } catch (err) {
           setConnectionState('disconnected');
-          setError('Unable to reconnect. Scan again.');
+          setError('Unable to reconnect. Please scan again.');
+          showToast('Reconnection failed', 'error');
         }
       }, 3000);
     }
@@ -186,14 +195,15 @@ export default function SessionPage() {
         sessionIdRef.current = data._id;
         setIsSessionActive(true);
         setIsPaused(false);
-        
-        // Start timer
+        showToast('Session started', 'success');
+
         timerRef.current = setInterval(() => {
           setSessionTime(prev => prev + 1);
         }, 1000);
       }
     } catch (err) {
       console.error('Failed to start session:', err);
+      showToast('Failed to start session', 'error');
     }
   };
 
@@ -220,8 +230,7 @@ export default function SessionPage() {
 
   const endSession = async () => {
     setIsSessionActive(false);
-    
-    // Clear all intervals
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -237,6 +246,7 @@ export default function SessionPage() {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${token}` },
         });
+        showToast('Session ended', 'info');
       } catch (err) {
         console.error('Failed to end session:', err);
       }
@@ -254,12 +264,10 @@ export default function SessionPage() {
     router.push('/patients');
   };
 
-  // ✅ FIX: Toggle Pause - Timer aur Mock Interval dono ko control karo
   const togglePause = () => {
     setIsPaused(!isPaused);
-    
+
     if (!isPaused) {
-      // Pause - Timer aur Mock interval dono roko
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -268,20 +276,19 @@ export default function SessionPage() {
         clearInterval(mockIntervalRef.current);
         mockIntervalRef.current = null;
       }
+      showToast('Session paused', 'warning');
     } else {
-      // Resume - Timer aur Mock interval dubara start karo
       timerRef.current = setInterval(() => {
         setSessionTime(prev => prev + 1);
       }, 1000);
-      
-      // Mock interval restart karo
+
       if (connectionState === 'connected' && !bleDevice) {
         startMockDataGeneration();
       }
+      showToast('Session resumed', 'success');
     }
   };
 
-  // Mock data generation function
   const startMockDataGeneration = () => {
     if (mockIntervalRef.current) {
       clearInterval(mockIntervalRef.current);
@@ -310,23 +317,20 @@ export default function SessionPage() {
     }, 1000);
   };
 
-  // Mock mode for development
   const startMockMode = () => {
     setConnectionState('connected');
+    showToast('Mock mode started', 'info');
     startSession();
     setIsSessionActive(true);
     setIsPaused(false);
 
-    // Timer start
     timerRef.current = setInterval(() => {
       setSessionTime(prev => prev + 1);
     }, 1000);
 
-    // Mock data generation start
     startMockDataGeneration();
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -343,19 +347,32 @@ export default function SessionPage() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  const getStatusText = () => {
+    if (isPaused) return 'Paused';
+    if (isSessionActive) return 'Recording';
+    return 'Stopped';
+  };
+
+  const getStatusClass = () => {
+    if (isPaused) return 'paused';
+    if (isSessionActive) return 'recording';
+    return 'stopped';
+  };
+
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>BLE Session</h1>
-        <button className="btn btn-danger" onClick={() => router.push('/patients')}>
-          ← Back
+      <div className="card-header">
+        <h1 className="card-title">Session</h1>
+        <button className="btn btn-outline" onClick={() => router.push('/patients')}>
+          Back
         </button>
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        {/* Patient & Connection Status */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <strong>Patient:</strong> {patientName}
+            <span style={{ fontWeight: 600 }}>Patient:</span> {patientName}
           </div>
           <div>
             <span className={`connection-badge ${connectionState}`}>
@@ -365,106 +382,115 @@ export default function SessionPage() {
           </div>
         </div>
 
+        {/* Error */}
         {error && (
-          <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
+          <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
             {error}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '40px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        {/* Live Values */}
+        <div style={{ display: 'flex', gap: '32px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>Heart Rate</div>
-            <div style={{ fontSize: '42px', fontWeight: 'bold' }}>
-              {heartRate || '--'} <span style={{ fontSize: '18px' }}>BPM</span>
+            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Heart Rate</div>
+            <div style={{ fontSize: '36px', fontWeight: 700, color: '#0F172A' }}>
+              {heartRate || '--'} <span style={{ fontSize: '16px', fontWeight: 400, color: '#64748B' }}>BPM</span>
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>RR Interval</div>
-            <div style={{ fontSize: '26px', fontWeight: 'bold' }}>
-              {rrInterval ? `${rrInterval}ms` : '--'}
+            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>RR Interval</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: '#0F172A' }}>
+              {rrInterval ? `${rrInterval} ms` : '--'}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>Session Time</div>
-            <div style={{ fontSize: '26px', fontWeight: 'bold' }}>
+            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Session Time</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: '#0F172A' }}>
               {formatTime(sessionTime)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>Readings</div>
-            <div style={{ fontSize: '26px', fontWeight: 'bold' }}>{readings.length}</div>
+            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Readings</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: '#0F172A' }}>
+              {readings.length}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Status</div>
+            <div>
+              <span className={`status-indicator ${getStatusClass()}`}>
+                <span className="dot"></span>
+                {getStatusText()}
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Controls */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {connectionState === 'disconnected' && (
             <>
               <button className="btn btn-primary" onClick={startScanning}>
-                🔍 Scan for Device
+                Scan for Device
               </button>
               <button className="btn btn-warning" onClick={startMockMode}>
-                🧪 Mock Mode (Demo)
+                Mock Mode
               </button>
             </>
           )}
 
           {connectionState === 'scanning' && (
-            <button className="btn" style={{ background: '#e5e7eb' }} disabled>
-              ⏳ Scanning...
+            <button className="btn" style={{ background: '#E2E8F0', color: '#475569', cursor: 'default' }} disabled>
+              Scanning...
             </button>
           )}
 
           {connectionState === 'connecting' && (
-            <button className="btn" style={{ background: '#e5e7eb' }} disabled>
-              🔗 Connecting...
+            <button className="btn" style={{ background: '#E2E8F0', color: '#475569', cursor: 'default' }} disabled>
+              Connecting...
             </button>
           )}
 
           {connectionState === 'connected' && isSessionActive && (
             <>
               <button className="btn btn-warning" onClick={togglePause}>
-                {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+                {isPaused ? 'Resume' : 'Pause'}
               </button>
               <button className="btn btn-danger" onClick={endSession}>
-                ⏹️ End Session
+                End Session
               </button>
             </>
           )}
 
           {connectionState === 'reconnecting' && (
-            <button className="btn" style={{ background: '#fef3c7', color: '#92400e' }} disabled>
-              🔄 Reconnecting...
+            <button className="btn" style={{ background: '#FEF3C7', color: '#92400E', cursor: 'default' }} disabled>
+              Reconnecting...
             </button>
           )}
-        </div>
-
-        {/* Status indicator */}
-        <div style={{ marginTop: '12px', fontSize: '14px', color: '#6b7280' }}>
-          Status: {isPaused ? '⏸️ Paused' : isSessionActive ? '▶️ Recording' : '⏹️ Stopped'}
         </div>
       </div>
 
       {/* Readings History */}
       {readings.length > 0 && (
         <div className="card">
-          <h3>📊 Readings History</h3>
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px' }}>Readings History</h3>
+          <div className="table-wrapper">
+            <table>
               <thead>
-                <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
-                  <th style={{ padding: '8px' }}>#</th>
-                  <th style={{ padding: '8px' }}>Time</th>
-                  <th style={{ padding: '8px' }}>HR (BPM)</th>
-                  <th style={{ padding: '8px' }}>RR (ms)</th>
+                <tr>
+                  <th>#</th>
+                  <th>Time</th>
+                  <th>Heart Rate (BPM)</th>
+                  <th>RR Interval (ms)</th>
                 </tr>
               </thead>
               <tbody>
-                {readings.slice(-20).map((r, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '8px' }}>{readings.length - 20 + i + 1}</td>
-                    <td style={{ padding: '8px' }}>{new Date(r.timestamp).toLocaleTimeString()}</td>
-                    <td style={{ padding: '8px' }}>{r.heartRate}</td>
-                    <td style={{ padding: '8px' }}>{r.rrIntervals?.[0] || '-'}</td>
+                {readings.slice(-20).reverse().map((r, i) => (
+                  <tr key={i}>
+                    <td>{readings.length - i}</td>
+                    <td>{new Date(r.timestamp).toLocaleTimeString()}</td>
+                    <td>{r.heartRate}</td>
+                    <td>{r.rrIntervals?.[0] || '-'}</td>
                   </tr>
                 ))}
               </tbody>

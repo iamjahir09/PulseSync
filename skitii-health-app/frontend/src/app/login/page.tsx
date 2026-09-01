@@ -2,21 +2,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ToastContainer';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('admin@skitii.com');
   const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      const res = await fetch('http://localhost:5000/auth/login', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -30,25 +30,33 @@ export default function LoginPage() {
 
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/patients');
+
+      showToast('Login successful', 'success');
+
+      setTimeout(() => router.push('/patients'), 400);
     } catch (err: any) {
-      setError(err.message);
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container" style={{ maxWidth: '400px', marginTop: '80px' }}>
-      <div className="card">
-        <h2 style={{ marginBottom: '24px', textAlign: 'center' }}>Skitii Health</h2>
+    <div className="container">
+      <div className="card login-card">
+        <div className="logo">
+          <h1>PulseSync</h1>
+          <p>Patient Monitoring System</p>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email</label>
+            <label>Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@skitii.com"
               required
             />
           </div>
@@ -58,23 +66,23 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               required
             />
           </div>
-          {error && (
-            <div style={{ color: '#dc2626', fontSize: '14px', marginBottom: '12px' }}>
-              {error}
-            </div>
-          )}
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
+            className="btn btn-primary btn-lg"
+            style={{ width: '100%', justifyContent: 'center' }}
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="demo-credentials">
+          Demo: admin@skitii.com / password123
+        </div>
       </div>
     </div>
   );
