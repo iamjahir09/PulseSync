@@ -1,0 +1,227 @@
+# ============================
+# DEPENDENCIES
+# ============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================
+# ENVIRONMENT FILES
+# ============================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.env
+*.env.local
+
+# ============================
+# BUILD OUTPUTS
+# ============================
+dist/
+build/
+.next/
+out/
+.nuxt/
+.cache/
+.parcel-cache/
+.vuepress/dist/
+
+# ============================
+# BACKEND SPECIFIC
+# ============================
+backend/dist/
+backend/node_modules/
+backend/.env
+backend/coverage/
+backend/*.log
+backend/test-results/
+
+# ============================
+# FRONTEND SPECIFIC
+# ============================
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env*.local
+
+# ============================
+# NEXT.JS SPECIFIC
+# ============================
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/.vercel/
+frontend/.turbo/
+
+# ============================
+# IDE / EDITOR
+# ============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ============================
+# OPERATING SYSTEM
+# ============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*.tmp
+*.temp
+
+# ============================
+# LOGS
+# ============================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ============================
+# TESTING
+# ============================
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+__mocks__/
+
+# ============================
+# DATABASE
+# ============================
+*.sqlite
+*.db
+*.sqlite3
+*.db-journal
+*.mongo/
+*.mongodb/
+
+# ============================
+# MONGODB (Local)
+# ============================
+/data/
+/db/
+mongodb-data/
+
+# ============================
+# DOCKER
+# ============================
+docker-compose.override.yml
+.docker/
+*.dockerfile
+Dockerfile.dev
+
+# ============================
+# TEMP / CACHE
+# ============================
+.temp/
+.tmp/
+.cache/
+*.cache
+*.tsbuildinfo
+*.tsbuildinfo.*
+.eslintcache
+.prettiercache
+
+# ============================
+# SECURITY / SECRETS
+# ============================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+secret/
+credentials/
+*.secret
+*.private
+
+# ============================
+# MISC
+# ============================
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# ============================
+# BACKUP FILES
+# ============================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============================
+# PROJECT SPECIFIC
+# ============================
+*.iml
+.terraform/
+*.hprof
+*.pyc
+__pycache__/
+*.class
+
+# ============================
+# TYPE SCRIPT
+# ============================
+*.tsbuildinfo
+frontend/.next/types/
+backend/.tsbuildinfo
+
+# ============================
+# STORYBOOK
+# ============================
+storybook-static/
+
+# ============================
+# PWA
+# ============================
+sw.js
+workbox-*.js
+service-worker.js
+sw-register.js
+manifest.json
+
+# ============================
+# NESTJS
+# ============================
+backend/.eslintcache
+backend/test-results/
+backend/coverage/
+backend/nest-cli.json
